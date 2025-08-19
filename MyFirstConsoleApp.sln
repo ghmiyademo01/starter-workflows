@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{1A851FFA-5A44-450A-8B8C-116805DBE537}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyFirstConsoleApp", ".github\MyFirstConsoleApp\MyFirstConsoleApp.csproj", "{0DC64C15-2D58-4CA8-8C21-0C82E760843B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0DC64C15-2D58-4CA8-8C21-0C82E760843B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DC64C15-2D58-4CA8-8C21-0C82E760843B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DC64C15-2D58-4CA8-8C21-0C82E760843B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DC64C15-2D58-4CA8-8C21-0C82E760843B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0DC64C15-2D58-4CA8-8C21-0C82E760843B} = {1A851FFA-5A44-450A-8B8C-116805DBE537}
+	EndGlobalSection
+EndGlobal
