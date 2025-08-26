@@ -1,18 +1,26 @@
-<p align="center">
-  <img src="https://avatars0.githubusercontent.com/u/44036562?s=100&v=4"/> 
-</p>
+[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-## Starter Workflows
+# Checkout V5
 
-These are the workflow files for helping people get started with GitHub Actions.  They're presented whenever you start to create a new GitHub Actions workflow.
+## What's new
 
-**If you want to get started with GitHub Actions, you can use these starter workflows by clicking the "Actions" tab in the repository where you want to create a workflow.**
+- Updated to the node24 runtime
+  - This requires a minimum Actions Runner version of [v2.327.1](https://github.com/actions/runner/releases/tag/v2.327.1) to run.
 
-<img src="https://d3vv6lp55qjaqc.cloudfront.net/items/353A3p3Y2x3c2t2N0c01/Image%202019-08-27%20at%203.25.07%20PM.png" max-width="75%"/>
+
+# Checkout V4
+
+This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
+
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://docs.github.com/actions/using-workflows/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+
+The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
+
+When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
 
 ### Note
 
-Thank you for your interest in this GitHub repo, however, right now we are not taking contributions. 
+Thank you for your interest in this GitHub action, however, right now we are not taking contributions. 
 
 We continue to focus our resources on strategic areas that help our customers be successful while making developers' lives easier. While GitHub Actions remains a key part of this vision, we are allocating resources towards other areas of Actions and are not taking contributions to this repository at this time. The GitHub public roadmap is the best place to follow along for any updates on features we’re working on and what stage they’re in.
 
@@ -28,63 +36,328 @@ We will still provide security updates for this project and fix major breaking c
 
 You are welcome to still raise bugs in this repo.
 
-### Directory structure
+# What's new
 
-* [ci](ci): solutions for Continuous Integration workflows
-* [deployments](deployments): solutions for Deployment workflows
-* [automation](automation): solutions for automating workflows
-* [code-scanning](code-scanning): solutions for [Code Scanning](https://github.com/features/security)
-* [pages](pages): solutions for Pages workflows
-* [icons](icons): svg icons for the relevant template
+Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
 
-Each workflow must be written in YAML and have a `.yml` extension. They also need a corresponding `.properties.json` file that contains extra metadata about the workflow (this is displayed in the GitHub.com UI).
+# Usage
 
-For example: `ci/django.yml` and `ci/properties/django.properties.json`.
+<!-- start usage -->
+```yaml
+- uses: actions/checkout@v5
+  with:
+    # Repository name with owner. For example, actions/checkout
+    # Default: ${{ github.repository }}
+    repository: ''
 
-### Valid properties
+    # The branch, tag or SHA to checkout. When checking out the repository that
+    # triggered a workflow, this defaults to the reference or SHA for that event.
+    # Otherwise, uses the default branch.
+    ref: ''
 
-* `name`: the name shown in onboarding. This property is unique within the repository.
-* `description`: the description shown in onboarding
-* `iconName`: the icon name in the relevant folder, for example, `django` should have an icon `icons/django.svg`. Only SVG is supported at this time. Another option is to use [octicon](https://primer.style/octicons/). The format to use an octicon is `octicon <<icon name>>`. Example: `octicon person`
-* `creator`: creator of the template shown in onboarding. All the workflow templates from an author will have the same `creator` field.
-* `categories`: the categories that it will be shown under. Choose at least one category from the list [here](#categories). Further, choose the categories from the list of languages available [here](https://github.com/github/linguist/blob/master/lib/linguist/languages.yml) and the list of tech stacks available [here](https://github.com/github-starter-workflows/repo-analysis-partner/blob/main/tech_stacks.yml). When a user views the available templates, those templates that match the language and tech stacks will feature more prominently.
+    # Personal access token (PAT) used to fetch the repository. The PAT is configured
+    # with the local git config, which enables your scripts to run authenticated git
+    # commands. The post-job step removes the PAT.
+    #
+    # We recommend using a service account with the least permissions necessary. Also
+    # when generating a new PAT, select the least scopes necessary.
+    #
+    # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    #
+    # Default: ${{ github.token }}
+    token: ''
 
-### Categories
-* continuous-integration
-* deployment
-* testing
-* code-quality
-* code-review
-* dependency-management
-* monitoring
-* Automation
-* utilities
-* Pages
-* Hugo
+    # SSH key used to fetch the repository. The SSH key is configured with the local
+    # git config, which enables your scripts to run authenticated git commands. The
+    # post-job step removes the SSH key.
+    #
+    # We recommend using a service account with the least permissions necessary.
+    #
+    # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    ssh-key: ''
 
-### Variables
-These variables can be placed in the starter workflow and will be substituted as detailed below:
+    # Known hosts in addition to the user and global host key database. The public SSH
+    # keys for a host may be obtained using the utility `ssh-keyscan`. For example,
+    # `ssh-keyscan github.com`. The public key for github.com is always implicitly
+    # added.
+    ssh-known-hosts: ''
 
-* `$default-branch`: will substitute the branch from the repository, for example `main` and `master`
-* `$protected-branches`: will substitute any protected branches from the repository
-* `$cron-daily`: will substitute a valid but random time within the day
+    # Whether to perform strict host key checking. When true, adds the options
+    # `StrictHostKeyChecking=yes` and `CheckHostIP=no` to the SSH command line. Use
+    # the input `ssh-known-hosts` to configure additional hosts.
+    # Default: true
+    ssh-strict: ''
 
-## How to test templates before publishing
+    # The user to use when connecting to the remote SSH host. By default 'git' is
+    # used.
+    # Default: git
+    ssh-user: ''
 
-### Disable template for public
-The template author adds a `labels` array in the template's `properties.json` file with a label `preview`. This will hide the template from users, unless user uses query parameter `preview=true` in the URL.
-Example `properties.json` file:
-```json
-{
-    "name": "Node.js",
-    "description": "Build and test a Node.js project with npm.",
-    "iconName": "nodejs",
-    "categories": ["Continuous integration", "JavaScript", "npm", "React", "Angular", "Vue"],
-    "labels": ["preview"]
-}
+    # Whether to configure the token or SSH key with the local git config
+    # Default: true
+    persist-credentials: ''
+
+    # Relative path under $GITHUB_WORKSPACE to place the repository
+    path: ''
+
+    # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
+    # Default: true
+    clean: ''
+
+    # Partially clone against a given filter. Overrides sparse-checkout if set.
+    # Default: null
+    filter: ''
+
+    # Do a sparse checkout on given patterns. Each pattern should be separated with
+    # new lines.
+    # Default: null
+    sparse-checkout: ''
+
+    # Specifies whether to use cone-mode when doing a sparse checkout.
+    # Default: true
+    sparse-checkout-cone-mode: ''
+
+    # Number of commits to fetch. 0 indicates all history for all branches and tags.
+    # Default: 1
+    fetch-depth: ''
+
+    # Whether to fetch tags, even if fetch-depth > 0.
+    # Default: false
+    fetch-tags: ''
+
+    # Whether to show progress status output when fetching.
+    # Default: true
+    show-progress: ''
+
+    # Whether to download Git-LFS files
+    # Default: false
+    lfs: ''
+
+    # Whether to checkout submodules: `true` to checkout submodules or `recursive` to
+    # recursively checkout submodules.
+    #
+    # When the `ssh-key` input is not provided, SSH URLs beginning with
+    # `git@github.com:` are converted to HTTPS.
+    #
+    # Default: false
+    submodules: ''
+
+    # Add repository path as safe.directory for Git global config by running `git
+    # config --global --add safe.directory <path>`
+    # Default: true
+    set-safe-directory: ''
+
+    # The base URL for the GitHub instance that you are trying to clone from, will use
+    # environment defaults to fetch from the same instance that the workflow is
+    # running from unless specified. Example URLs are https://github.com or
+    # https://my-ghes-server.example.com
+    github-server-url: ''
+```
+<!-- end usage -->
+
+# Scenarios
+
+- [Checkout V5](#checkout-v5)
+  - [What's new](#whats-new)
+- [Checkout V4](#checkout-v4)
+    - [Note](#note)
+- [What's new](#whats-new-1)
+- [Usage](#usage)
+- [Scenarios](#scenarios)
+  - [Fetch only the root files](#fetch-only-the-root-files)
+  - [Fetch only the root files and `.github` and `src` folder](#fetch-only-the-root-files-and-github-and-src-folder)
+  - [Fetch only a single file](#fetch-only-a-single-file)
+  - [Fetch all history for all tags and branches](#fetch-all-history-for-all-tags-and-branches)
+  - [Checkout a different branch](#checkout-a-different-branch)
+  - [Checkout HEAD^](#checkout-head)
+  - [Checkout multiple repos (side by side)](#checkout-multiple-repos-side-by-side)
+  - [Checkout multiple repos (nested)](#checkout-multiple-repos-nested)
+  - [Checkout multiple repos (private)](#checkout-multiple-repos-private)
+  - [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-head-commit-instead-of-merge-commit)
+  - [Checkout pull request on closed event](#checkout-pull-request-on-closed-event)
+  - [Push a commit using the built-in token](#push-a-commit-using-the-built-in-token)
+  - [Push a commit to a PR using the built-in token](#push-a-commit-to-a-pr-using-the-built-in-token)
+- [Recommended permissions](#recommended-permissions)
+- [License](#license)
+
+## Fetch only the root files
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    sparse-checkout: .
 ```
 
-For viewing the templates with `preview` label, provide query parameter `preview=true` to the  `new workflow` page URL. Eg. `https://github.com/<owner>/<repo_name>/actions/new?preview=true`.
+## Fetch only the root files and `.github` and `src` folder
 
-### Enable template for public
-Remove the `labels` array from `properties.json` file to publish the template to public
+```yaml
+- uses: actions/checkout@v5
+  with:
+    sparse-checkout: |
+      .github
+      src
+```
+
+## Fetch only a single file
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    sparse-checkout: |
+      README.md
+    sparse-checkout-cone-mode: false
+```
+
+## Fetch all history for all tags and branches
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    fetch-depth: 0
+```
+
+## Checkout a different branch
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    ref: my-branch
+```
+
+## Checkout HEAD^
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    fetch-depth: 2
+- run: git checkout HEAD^
+```
+
+## Checkout multiple repos (side by side)
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v5
+  with:
+    path: main
+
+- name: Checkout tools repo
+  uses: actions/checkout@v5
+  with:
+    repository: my-org/my-tools
+    path: my-tools
+```
+> - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+
+## Checkout multiple repos (nested)
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v5
+
+- name: Checkout tools repo
+  uses: actions/checkout@v5
+  with:
+    repository: my-org/my-tools
+    path: my-tools
+```
+> - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+
+## Checkout multiple repos (private)
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v5
+  with:
+    path: main
+
+- name: Checkout private tools
+  uses: actions/checkout@v5
+  with:
+    repository: my-org/my-private-tools
+    token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+    path: my-tools
+```
+
+> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
+
+
+## Checkout pull request HEAD commit instead of merge commit
+
+```yaml
+- uses: actions/checkout@v5
+  with:
+    ref: ${{ github.event.pull_request.head.sha }}
+```
+
+## Checkout pull request on closed event
+
+```yaml
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, closed]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+```
+
+## Push a commit using the built-in token
+
+```yaml
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          date > generated.txt
+          # Note: the following account information will not work on GHES
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "generated"
+          git push
+```
+*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+## Push a commit to a PR using the built-in token
+
+In a pull request trigger, `ref` is required as GitHub Actions checks out in detached HEAD mode, meaning it doesn’t check out your branch by default.
+
+```yaml
+on: pull_request
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+      - run: |
+          date > generated.txt
+          # Note: the following account information will not work on GHES
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "generated"
+          git push
+```
+
+*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+# Recommended permissions
+
+When using the `checkout` action in your GitHub Actions workflow, it is recommended to set the following `GITHUB_TOKEN` permissions to ensure proper functionality, unless alternative auth is provided via the `token` or `ssh-key` inputs:
+
+```yaml
+permissions:
+  contents: read
+```
+
+# License
+
+The scripts and documentation in this project are released under the [MIT License](LICENSE)
