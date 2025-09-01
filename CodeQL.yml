@@ -1,0 +1,22 @@
+{
+  "schema": {
+    "properties": {
+      "accessToken": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "idToken": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "refreshToken": {
+        "type": "string"
+      }
+    },
+    "type": "object",
+    "required": [
+      "accessToken",
+      "idToken"
+    ]
+  }
+}
