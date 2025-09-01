@@ -1,0 +1,8 @@
+def add_numbers(a, b):
+    return a + b
+
+def test_add_numbers_returns_correct_sum():
+    num1 = 5
+    num2 = 7
+    result = add_numbers(num1, num2)
+    assert result == 12
