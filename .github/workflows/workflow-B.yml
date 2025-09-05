@@ -1,0 +1,22 @@
+name: Reusable workflow example                       # ワークフロー名（表示名）
+
+on:
+  workflow_call:                                      # 再利用可能ワークフローであることを示すトリガー
+    inputs:
+      config-path:                                    # 呼び出し側から受け取る必須文字列入力（labeler の設定ファイルのパス）
+        required: true
+        type: string
+    secrets:
+      token:                                          # 呼び出し側から受け取る必須シークレット（API に使うトークン）
+        required: true
+
+jobs:
+  triage:                                             # 実行するジョブ
+    runs-on: ubuntu-latest                            # ランナー
+    steps:
+    - uses: actions/labeler@v5                        # これを実行する
+      with:
+        repo-token: ${{ secrets.token }}              # 呼び出し元から渡されたラベル操作に使うトークン（secrets.token を渡す）
+        configuration-path: ${{ inputs.config-path }} # 呼び出し元から渡された labeler の設定ファイルへのパス（inputs.config-path を渡す）
+# このワークフローがやること
+# actions/labeler@v5 を使って、PR の変更ファイルに応じてラベル付けを自動化する。
