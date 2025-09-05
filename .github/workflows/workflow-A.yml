@@ -1,0 +1,18 @@
+name: Call a reusable workflow
+
+on:
+  pull_request:
+    branches:
+      - main # main ブランチへの PR イベントで起動
+
+jobs:
+  call-workflow-passing-data:
+    permissions:
+      contents: read
+      issues: write 
+      pull-requests: write
+    uses: ghmiyademo01/starter-workflows/.github/workflows/workflow-B.yml@main
+    with:
+      config-path: .github/labeler.yml
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
