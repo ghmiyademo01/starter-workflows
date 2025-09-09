@@ -1,12 +1,3 @@
-# このワークフローはGitHubによって認定されていないアクションを使用します。
-# それらはサードパーティによって提供され、
-# 別個の利用規約、プライバシーポリシー、
-# ドキュメントを参照してください。
-
-# GitHub では、コミット SHA にアクションをピン留めすることが推奨されます。
-# 新しいバージョンを取得するには、SHA を更新する必要があります。
-# タグまたはブランチを参照することもできますが、アクションは警告なしに変更される可能性があります。
-
 name: Build and deploy to Azure Kubernetes Service
 
 env:
@@ -15,9 +6,6 @@ env:
   RESOURCE_GROUP: testMiyaGroup          # set this to the resource group containing your AKS cluster
   CLUSTER_NAME: gitHubTest              # set this to the name of your AKS cluster
   REGISTRY_URL: https://gitHubTestContainer.azurecr.io              # set this to the URL of your registry
-  # If you bake using helm:
-  #CHART_PATH: MY_HELM_FILE                   # set this to the path to your helm file
-  #CHART_OVERRIDE_PATH: MY_OVERRIDE_FILES     # set this to an array of override file paths
 
 on: [push]
 
@@ -47,17 +35,6 @@ jobs:
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.CLUSTER_NAME }}
       id: login
-
-    #- name: Configure deployment
-    #  uses: azure/k8s-bake@61041e8c2f75c1f01186c8f05fb8b24e1fc507d8
-    #  with:
-    #    renderEngine: 'helm'
-    #    helmChart: ${{ env.CHART_PATH }}
-    #    overrideFiles: ${{ env.CHART_OVERRIDE_PATH }}
-    #    overrides: |
-    #      replicas:2
-    #    helm-version: 'latest'
-    #  id: bake
 
     - name: Deploys application
       uses: Azure/k8s-deploy@v5.0.4
