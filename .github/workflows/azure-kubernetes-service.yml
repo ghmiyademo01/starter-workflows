@@ -1,46 +1,74 @@
-name: Build and deploy to Azure Kubernetes Service
+name: Build and deploy to AKS
+on:
+  push:
+    branches: [ main ]  # 必要に応じて調整
+
+permissions:
+  id-token: write       # OIDC 認証を使う場合に必要（SP シークレットなら不要）
+  contents: read
 
 env:
-  AZURE_CONTAINER_REGISTRY: gitHubTestContainer # set this to the name of your container registry
-  PROJECT_NAME: default              # set this to your project's name
-  RESOURCE_GROUP: testMiyaGroup          # set this to the resource group containing your AKS cluster
-  CLUSTER_NAME: gitHubTest              # set this to the name of your AKS cluster
-  REGISTRY_URL: https://gitHubTestContainer.azurecr.io              # set this to the URL of your registry
-
-on: [push]
+  AZURE_CONTAINER_REGISTRY: gitHubTestContainer          # ACR 名（例: myacr）
+  ACR_LOGIN_SERVER: gitHubTestContainer.azurecr.io       # スキームなし
+  PROJECT_NAME: default                                  # リポジトリ/イメージ名
+  RESOURCE_GROUP: testMiyaGroup
+  CLUSTER_NAME: gitHubTest
+  # Helm を使う場合の例（Kustomize/Kompose なら入力を変更）
+  CHART_PATH: ./charts/app
+  CHART_OVERRIDE_PATH: ./charts/values-prod.yaml
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Azure Login
-      uses: Azure/login@v2.3.0
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # ---- 認証（推奨: OIDC）----
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # ※ もし従来の SP シークレットを使うなら下記
+      # - uses: azure/login@v2
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+      # -----------------------------
 
-    - name: Build image on ACR
-      uses: azure/CLI@v2.1.0
-      with:
-        azcliversion: 2.29.1
-        inlineScript: |
-          az configure --defaults acr=${{ env.AZURE_CONTAINER_REGISTRY }}
-          az acr build -t -t ${{ env.REGISTRY_URL }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+      - name: Build image on ACR
+        uses: azure/CLI@v2
+        with:
+          azcliversion: 2.29.1
+          inlineScript: |
+            az acr build \
+              -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.PROJECT_NAME }}:${{ github.sha }} \
+              -r ${{ env.AZURE_CONTAINER_REGISTRY }} \
+              .
 
-    - name: Gets K8s context
-      uses: azure/aks-set-context@v4.0.3
-      with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Get AKS context
+        uses: azure/aks-set-context@v4
+        with:
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.CLUSTER_NAME }}
-      id: login
 
-    - name: Deploys application
-      uses: Azure/k8s-deploy@v5.0.4
-      with:
-        manifests: ${{ steps.bake.outputs.manifestsBundle }}
-        images: |
-          ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.PROJECT_NAME }}:${{ github.sha }}
-        imagepullsecrets: |
-          ${{ env.PROJECT_NAME }}
+      # （必要に応じて）imagePullSecret を事前作成する場合
+      # - name: Create imagePullSecret (optional)
+      #   uses: Azure/k8s-create-secret@v4
+      #   with:
+      #     container-registry-url: ${{ env.ACR_LOGIN_SERVER }}
+      #     container-registry-username: ${{ secrets.ACR_USERNAME }}
+      #     container-registry-password: ${{ secrets.ACR_PASSWORD }}
+      #     secret-name: ${{ env.PROJECT_NAME }}
+      
+      - name: Deploy to AKS (plain manifests)
+        uses: Azure/k8s-deploy@v5
+        with:
+          manifests: |
+            k8s/deployment.yaml
+            k8s/service.yaml
+          images: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
+          # imagepullsecrets: |  # ACR を AKS にアタッチしていれば不要
+	        #   ${{ env.PROJECT_NAME }}
+
