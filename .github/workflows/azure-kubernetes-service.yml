@@ -1,27 +1,40 @@
-# .github/workflows/deploy-aks-sp.yml
-# GitHub Actions → AKS へデプロイ（Service Principal シークレット方式）
-# 必要な Secrets:
-#   - AZURE_CREDENTIALS  … サービスプリンシパルの JSON（{ "clientId": "...", "clientSecret": "...", "subscriptionId": "...", "tenantId": "..." }）
-#   - （任意）ACR_USERNAME / ACR_PASSWORD … imagePullSecret を作る場合に使用
-# 注意:
-#   - ACR 名（AZURE_CONTAINER_REGISTRY）は **小文字のみ** 有効（例: myacr）
-#   - ACR のログインサーバー（ACR_LOGIN_SERVER）は `myacr.azurecr.io` の形式（https は付けない）
+# .github/workflows/deploy-aks-oidc.yml
+# GitHub Actions → AKS へデプロイ（OIDC + Federated Credential 方式）
+# 事前準備（Azure 側）：
+#   1) 対象の Microsoft Entra アプリ/サービスプリンシパルに Federated Credential を追加
+#      - Issuer:  https://token.actions.githubusercontent.com
+#      - Subject: repo:ghmiyademo01/starter-workflows:ref:refs/heads/main
+#      - Audience: api://AzureADTokenExchange
+#   2) ロール割り当て
+#      - ACR（レジストリ）: AcrPush
+#      - AKS（クラスター）: Azure Kubernetes Service Cluster User Role（推奨）※admin kubeconfigは検証用途のみ
+# 事前準備（GitHub 側）：
+#   - リポジトリ Secrets に下記3つを登録（OIDCで使用）
+#       AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID
+# 注意：
+#   - ACR 名は **小文字のみ** 有効（例: myacr）。ログインサーバーは https:// なし（例: myacr.azurecr.io）。
+#   - ACR を AKS に attach（az aks update --attach-acr）しておくと imagePullSecrets は不要。
 
-name: Build and deploy to AKS (SP secret)
+name: Build and deploy to AKS (OIDC)
 
 on:
   push:
     branches: [ main ]
 
+# OIDC で必須
+permissions:
+  id-token: write
+  contents: read
+
 env:
   # ====== あなたの環境に合わせて設定 ======
-  AZURE_CONTAINER_REGISTRY: gitHubTestContainer          # ACR 名（例: myacr）※小文字のみ
-  ACR_LOGIN_SERVER: gitHubTestContainer.azurecr.io       # 例: myacr.azurecr.io
-  PROJECT_NAME: default                                  # イメージ名/リポジトリ名（例: app）
+  AZURE_CONTAINER_REGISTRY: gitHubTestContainer          # ACR 名（例: myacr）※実名に合わせる（小文字のみ）
+  ACR_LOGIN_SERVER: gitHubTestContainer.azurecr.io       # 例: myacr.azurecr.io（https:// は付けない）
+  PROJECT_NAME: default                                  # イメージ名/リポジトリ名
   RESOURCE_GROUP: testMiyaGroup
   CLUSTER_NAME: gitHubTest
   NAMESPACE: default                                     # デプロイ先 Namespace
-  # デプロイするマニフェスト（素の YAML 前提。Helm/Kustomize を使うなら別ワークフローに）
+  # 素のマニフェスト（Helm/Kustomize を使う場合は別ワークフローに）
   K8S_DEPLOYMENT: k8s/deployment.yaml
   K8S_SERVICE:    k8s/service.yaml
 
@@ -33,11 +46,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- Azure へログイン（Service Principal シークレット方式）---
-      - name: Azure Login (Service Principal secret)
+      # --- Azure へログイン（OIDC）---
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # --- ACR でコンテナイメージをビルド＆プッシュ（ACR Tasks）---
       - name: Build image on ACR
@@ -50,18 +65,21 @@ jobs:
               -r ${{ env.AZURE_CONTAINER_REGISTRY }} \
               .
 
-      # --- AKS の kubeconfig を取得 ---
-      # セキュリティ観点では admin: true は推奨されません。検証が済んだら RBAC + use-kubelogin へ移行してください。
-      - name: Get AKS context (admin temporary)
+      # --- 非管理者ログイン用に kubelogin をセットアップ ---
+      - name: Set up kubelogin for non-interactive auth
+        uses: azure/use-kubelogin@v1.2
+        with:
+          kubelogin-version: 'latest'
+
+      # --- AKS の kubeconfig を取得（非管理者での推奨パターン）---
+      - name: Get AKS context (via kubelogin)
         uses: azure/aks-set-context@v4
         with:
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.CLUSTER_NAME }}
-          admin: true
+          use-kubelogin: true
 
-      # --- （任意）プライベート ACR へ pull するための Secret を作成 ---
-      # ACR を AKS に attach 済みなら imagePullSecret は不要です（推奨: az aks update --attach-acr）。
-      # 未 attach かつマニフェストで imagePullSecrets を参照する場合のみ有効化してください。
+      # --- （任意）ACR を attach していない場合、imagePullSecret を事前作成する ---
       # - name: Create imagePullSecret (optional)
       #   uses: Azure/k8s-create-secret@v4
       #   with:
@@ -81,4 +99,5 @@ jobs:
             ${{ env.K8S_SERVICE }}
           images: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
-          # imagepullsecrets: |              # imagePullSecret を使う場合のみ有効化
+          # imagepullsecrets: |             # imagePullSecret を使う場合のみ有効化
+          #   ${{ env.PROJECT_NAME }}
