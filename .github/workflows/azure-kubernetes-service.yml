@@ -1,41 +1,45 @@
-name: Build and deploy to AKS
+# .github/workflows/deploy-aks-sp.yml
+# GitHub Actions → AKS へデプロイ（Service Principal シークレット方式）
+# 必要な Secrets:
+#   - AZURE_CREDENTIALS  … サービスプリンシパルの JSON（{ "clientId": "...", "clientSecret": "...", "subscriptionId": "...", "tenantId": "..." }）
+#   - （任意）ACR_USERNAME / ACR_PASSWORD … imagePullSecret を作る場合に使用
+# 注意:
+#   - ACR 名（AZURE_CONTAINER_REGISTRY）は **小文字のみ** 有効（例: myacr）
+#   - ACR のログインサーバー（ACR_LOGIN_SERVER）は `myacr.azurecr.io` の形式（https は付けない）
+
+name: Build and deploy to AKS (SP secret)
+
 on:
   push:
-    branches: [ main ]  # 必要に応じて調整
-
-permissions:
-  id-token: write       # OIDC 認証を使う場合に必要（SP シークレットなら不要）
-  contents: read
+    branches: [ main ]
 
 env:
-  AZURE_CONTAINER_REGISTRY: gitHubTestContainer          # ACR 名（例: myacr）
-  ACR_LOGIN_SERVER: gitHubTestContainer.azurecr.io       # スキームなし
-  PROJECT_NAME: default                                  # リポジトリ/イメージ名
+  # ====== あなたの環境に合わせて設定 ======
+  AZURE_CONTAINER_REGISTRY: gitHubTestContainer          # ACR 名（例: myacr）※小文字のみ
+  ACR_LOGIN_SERVER: gitHubTestContainer.azurecr.io       # 例: myacr.azurecr.io
+  PROJECT_NAME: default                                  # イメージ名/リポジトリ名（例: app）
   RESOURCE_GROUP: testMiyaGroup
   CLUSTER_NAME: gitHubTest
-  # Helm を使う場合の例（Kustomize/Kompose なら入力を変更）
-  CHART_PATH: ./charts/app
-  CHART_OVERRIDE_PATH: ./charts/values-prod.yaml
+  NAMESPACE: default                                     # デプロイ先 Namespace
+  # デプロイするマニフェスト（素の YAML 前提。Helm/Kustomize を使うなら別ワークフローに）
+  K8S_DEPLOYMENT: k8s/deployment.yaml
+  K8S_SERVICE:    k8s/service.yaml
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      # ---- 認証（推奨: OIDC）----
-      - name: Azure Login (OIDC)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Azure へログイン（Service Principal シークレット方式）---
+      - name: Azure Login (Service Principal secret)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      # ※ もし従来の SP シークレットを使うなら下記
-      # - uses: azure/login@v2
-      #   with:
-      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
-      # -----------------------------
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # --- ACR でコンテナイメージをビルド＆プッシュ（ACR Tasks）---
       - name: Build image on ACR
         uses: azure/CLI@v2
         with:
@@ -46,29 +50,35 @@ jobs:
               -r ${{ env.AZURE_CONTAINER_REGISTRY }} \
               .
 
-      - name: Get AKS context
+      # --- AKS の kubeconfig を取得 ---
+      # セキュリティ観点では admin: true は推奨されません。検証が済んだら RBAC + use-kubelogin へ移行してください。
+      - name: Get AKS context (admin temporary)
         uses: azure/aks-set-context@v4
         with:
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.CLUSTER_NAME }}
+          admin: true
 
-      # （必要に応じて）imagePullSecret を事前作成する場合
+      # --- （任意）プライベート ACR へ pull するための Secret を作成 ---
+      # ACR を AKS に attach 済みなら imagePullSecret は不要です（推奨: az aks update --attach-acr）。
+      # 未 attach かつマニフェストで imagePullSecrets を参照する場合のみ有効化してください。
       # - name: Create imagePullSecret (optional)
       #   uses: Azure/k8s-create-secret@v4
       #   with:
+      #     namespace: ${{ env.NAMESPACE }}
       #     container-registry-url: ${{ env.ACR_LOGIN_SERVER }}
       #     container-registry-username: ${{ secrets.ACR_USERNAME }}
       #     container-registry-password: ${{ secrets.ACR_PASSWORD }}
       #     secret-name: ${{ env.PROJECT_NAME }}
-      
-      - name: Deploy to AKS (plain manifests)
+
+      # --- デプロイ（素のマニフェストを適用、image タグを置換）---
+      - name: Deploy to AKS
         uses: Azure/k8s-deploy@v5
         with:
+          namespace: ${{ env.NAMESPACE }}
           manifests: |
-            k8s/deployment.yaml
-            k8s/service.yaml
+            ${{ env.K8S_DEPLOYMENT }}
+            ${{ env.K8S_SERVICE }}
           images: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
-          # imagepullsecrets: |  # ACR を AKS にアタッチしていれば不要
-          #   ${{ env.PROJECT_NAME }}
-
+          # imagepullsecrets: |              # imagePullSecret を使う場合のみ有効化
