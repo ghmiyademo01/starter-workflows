@@ -14,9 +14,9 @@ jobs:
   triage:                                             # 実行するジョブ
     runs-on: ubuntu-latest                            # ランナー
     steps:
-    - uses: actions/labeler@v5                        # これを実行する
+    - uses: actions/labeler@v6                        # これを実行する
       with:
         repo-token: ${{ secrets.token }}              # 呼び出し元から渡されたラベル操作に使うトークン（secrets.token を渡す）
         configuration-path: ${{ inputs.config-path }} # 呼び出し元から渡された labeler の設定ファイルへのパス（inputs.config-path を渡す）
 # このワークフローがやること
-# actions/labeler@v5 を使って、PR の変更ファイルに応じてラベル付けを自動化する。
+# actions/labeler@v6 を使って、PR の変更ファイルに応じてラベル付けを自動化する。
