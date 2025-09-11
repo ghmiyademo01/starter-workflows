@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 env:
-  # ====== あなたの環境に合わせて設定 ======
+  # ====== 環境に合わせて設定 ======
   AZURE_CONTAINER_REGISTRY: gitHubTestContainer          # ACR 名（例: myacr）※実名に合わせる（小文字のみ）
   ACR_LOGIN_SERVER: gitHubTestContainer.azurecr.io       # 例: myacr.azurecr.io（https:// は付けない）
   PROJECT_NAME: default                                  # イメージ名/リポジトリ名
@@ -78,16 +78,6 @@ jobs:
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.CLUSTER_NAME }}
           use-kubelogin: true
-
-      # --- （任意）ACR を attach していない場合、imagePullSecret を事前作成する ---
-      # - name: Create imagePullSecret (optional)
-      #   uses: Azure/k8s-create-secret@v4
-      #   with:
-      #     namespace: ${{ env.NAMESPACE }}
-      #     container-registry-url: ${{ env.ACR_LOGIN_SERVER }}
-      #     container-registry-username: ${{ secrets.ACR_USERNAME }}
-      #     container-registry-password: ${{ secrets.ACR_PASSWORD }}
-      #     secret-name: ${{ env.PROJECT_NAME }}
 
       # --- デプロイ（素のマニフェストを適用、image タグを置換）---
       - name: Deploy to AKS
