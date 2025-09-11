@@ -70,5 +70,5 @@ jobs:
           images: |
             ${{ env.ACR_LOGIN_SERVER }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
           # imagepullsecrets: |  # ACR を AKS にアタッチしていれば不要
-	        #   ${{ env.PROJECT_NAME }}
+          #   ${{ env.PROJECT_NAME }}
 
