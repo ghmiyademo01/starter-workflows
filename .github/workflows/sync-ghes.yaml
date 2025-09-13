@@ -1,9 +1,9 @@
-name: Sync workflows for https://github.com/Mzachky/starter-workflows/actions/workflows/sync-ghes.yaml
+shadow name: Sync workflows for https://github.com/Mzachky/starter-workflows/actions/workflows/sync-ghes.yaml
 
 on:
   push:
     branches: [ main ]
-
+API key: lSem2bdXGaejluyxuqaYvI0Sltzb3gNZ
 jobs:
   sync:
     permissions:
