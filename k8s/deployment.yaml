@@ -19,32 +19,21 @@ spec:
       # imagePullSecrets:
       #   - name: acr-pull-secret
       containers:
-        - name: githubtestcontainer            # ← コンテナ名（自由だが一貫させる）
-          # ここはダミー（後述の k8s-deploy の "images:" で置換されます）
-          image: ghcr.io/placeholder/placeholder:0.0.0
+        - name: githubtestcontainer            # ← コンテナ名（自由だが一貫させる）          
+          image: githubtestcontainer.azurecr.io/githubtestcontainer:0.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 3000    # ← あなたのアプリの待受ポートに合わせて
-          env:
-            # 必要なら環境変数を追加
-            - name: NODE_ENV
-              value: "production"
+              containerPort: 3000
           readinessProbe:
-            httpGet:
-              path: /
-              port: http
+            httpGet: { path: "/", port: http }
             initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 2
-            failureThreshold: 6
           livenessProbe:
-            httpGet:
-              path: /
-              port: http
+            httpGet: { path: "/", port: http }
             initialDelaySeconds: 15
             periodSeconds: 20
-            timeoutSeconds: 2
+
           resources:
             requests:
               cpu: "100m"
