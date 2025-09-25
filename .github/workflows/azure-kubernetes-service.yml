@@ -43,26 +43,23 @@ on:
   workflow_dispatch:
 
 # ========================
-# ▼ 環境変数（要調整）
+# ▼ 環境変数（要調整：値はすべて静的に設定）
 # ========================
 env:
-  # ACR の“名前のみ”（小文字・FQDN や .azurecr.io は含めない）
-  AZURE_CONTAINER_REGISTRY: githubtestcontainer        # 例: githubtestcontainer
+  # ACR の “名前のみ”（小文字／FQDN や .azurecr.io は含めない）
+  AZURE_CONTAINER_REGISTRY: githubtestcontainer      # 例: githubtestcontainer
 
-  # ACR 内のリポジトリ名（小文字推奨）
-  CONTAINER_REPOSITORY: sampleapp                      # 例: sampleapp
+  # ACR 内のリポジトリ名（小文字）
+  CONTAINER_REPOSITORY: sampleapp                    # 例: sampleapp
 
   # AKS / RG
-  RESOURCE_GROUP: testMiyaGroup                        # 例: testMiyaGroup
-  CLUSTER_NAME: gitHubTest                             # 例: gitHubTest（実リソース名に合わせて）
+  RESOURCE_GROUP: testMiyaGroup                      # 例: testMiyaGroup
+  CLUSTER_NAME: gitHubTest                           # 例: gitHubTest
 
-  # Kubernetes（デプロイ先の論理名）
-  K8S_NAMESPACE: default                               # 例: default
-  DEPLOYMENT_NAME: sampleapp                           # kubectl set image で更新する Deployment 名
-  CONTAINER_NAME: sampleapp                            # Deployment 内のコンテナ名
-
-  # 便利変数（自動）
-  ACR_LOGIN_SERVER: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+  # Kubernetes （デプロイ先）
+  K8S_NAMESPACE: default                             # 例: default
+  DEPLOYMENT_NAME: sampleapp                         # 例: sampleapp
+  CONTAINER_NAME: sampleapp                          # 例: sampleapp
 
 jobs:
   build-and-deploy:
@@ -77,7 +74,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1.4.6
         with:
-          # 事前にリポジトリの Secrets に AZURE_CREDENTIALS を登録しておく
+          # 事前にリポジトリの Secrets → Actions に AZURE_CREDENTIALS を登録（SP の JSON）
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Show ACR info (debug)
@@ -86,14 +83,14 @@ jobs:
           az acr show -n "$AZURE_CONTAINER_REGISTRY" -o table
 
       # -----------------------------
-      # Dockerfile が直下にある想定
-      # 別ディレクトリなら:
+      # Dockerfile がリポジトリ直下にある想定
+      # 別ディレクトリなら：
       #   --file app/Dockerfile app
-      # に変更してください（ビルドコンテキストも app に）
+      # のように、Dockerfile パスと “ビルドコンテキスト” を一致させる
       # -----------------------------
       - name: Build image on ACR (az acr build)
         run: |
-          # --image は repository:tag のみ（FQDN なし・小文字）
+          # --image は “repository:tag” のみ（FQDN 付けない／小文字）
           az acr build \
             --registry "$AZURE_CONTAINER_REGISTRY" \
             --image "${CONTAINER_REPOSITORY}:${GITHUB_SHA}" \
@@ -106,14 +103,12 @@ jobs:
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.CLUSTER_NAME }}
 
-      # まだ Namespace がなければ作成
       - name: Ensure namespace exists
         run: |
           kubectl get ns "$K8S_NAMESPACE" >/dev/null 2>&1 || \
           kubectl create ns "$K8S_NAMESPACE"
 
-      # すでにマニフェストがある場合は先に apply（初回デプロイ用）
-      # k8s/ 以下に deployment.yaml 等がある想定。なければスキップ。
+      # k8s/ にマニフェストがあるなら初回 apply
       - name: Apply Kubernetes manifests (if present)
         run: |
           if [ -d "k8s" ]; then
@@ -122,10 +117,10 @@ jobs:
             echo "k8s/ directory not found. Skipping apply."
           fi
 
-      # 既存 Deployment のコンテナイメージを書き換え
       - name: Update image & rollout
         run: |
-          # デプロイ時は FQDN 付きの完全名を使用
+          # ★ ここで派生値（FQDN 付きイメージ名）を組み立てる（env 参照は run 内で OK）
+          ACR_LOGIN_SERVER="${AZURE_CONTAINER_REGISTRY}.azurecr.io"
           FULL_IMAGE="${ACR_LOGIN_SERVER}/${CONTAINER_REPOSITORY}:${GITHUB_SHA}"
           echo "Setting image to: $FULL_IMAGE"
 
@@ -133,8 +128,14 @@ jobs:
             deployment/${DEPLOYMENT_NAME} \
             ${CONTAINER_NAME}=${FULL_IMAGE}
 
-          # ロールアウト完了待ち
           kubectl -n "$K8S_NAMESPACE" rollout status deployment/${DEPLOYMENT_NAME} --timeout=180s
+
+      # 参考: 初回だけ必要な場合がある（AKS に ACR Pull 権限を付与）
+      # 毎回は実行しないことを推奨。必要時のみ手動で uncomment。
+      # - name: (One-time) Attach ACR to AKS
+      #   run: |
+      #     ACR_ID=$(az acr show -n "$AZURE_CONTAINER_REGISTRY" --query id -o tsv)
+      #     az aks update -n "$CLUSTER_NAME" -g "$RESOURCE_GROUP" --attach-acr "$ACR_ID"
 
       # 参考: AKS が ACR から Pull できない場合（401 等）の対処（初回だけ実行推奨）
       # 運用では毎回実行しないでください。必要時のみ手動で有効化。
