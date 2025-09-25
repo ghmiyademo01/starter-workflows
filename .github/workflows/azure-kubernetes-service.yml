@@ -88,9 +88,10 @@ jobs:
         uses: Azure/k8s-deploy@v4 # k8s-deploy アクションを使用
         with:
           action: deploy  # デプロイアクションを指定
-     
-          manifests: |  # デプロイするマニフェストファイルを指定
-            k8s/*.yaml
+          # デプロイするマニフェストファイルを指定
+          manifests: |  
+            k8s/deployment.yaml
+            k8s/service.yaml
      
           images: | # デプロイするイメージを指定
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
