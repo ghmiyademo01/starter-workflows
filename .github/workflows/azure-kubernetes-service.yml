@@ -27,126 +27,75 @@
 # For more samples to get started with GitHub Action workflows to deploy to Azure, refer to https://github.com/Azure/actions-workflow-samples
 # For more options with the actions used below please refer to https://github.com/Azure/login
 
-name: Build and Deploy to AKS
+name: Build and deploy an app to AKS
 
 on:
   push:
-    branches: [ "main" ]
-    paths:
-      - "Dockerfile"
-      - "**/*.csproj"
-      - "**/*.sln"
-      - "src/**"
-      - "app/**"
-      - "k8s/**"
-      - ".github/workflows/azure-kubernetes-service.yml"
   workflow_dispatch:
 
-# ========================
-# ▼ 環境変数（要調整：値はすべて静的に設定）
-# ========================
 env:
-  # ACR の “名前のみ”（小文字／FQDN や .azurecr.io は含めない）
-  AZURE_CONTAINER_REGISTRY: githubtestcontainer      # 例: githubtestcontainer
-
-  # ACR 内のリポジトリ名（小文字）
-  CONTAINER_REPOSITORY: sampleapp                    # 例: sampleapp
-
-  # AKS / RG
-  RESOURCE_GROUP: testMiyaGroup                      # 例: testMiyaGroup
-  CLUSTER_NAME: gitHubTest                           # 例: gitHubTest
-
-  # Kubernetes （デプロイ先）
-  K8S_NAMESPACE: default                             # 例: default
-  DEPLOYMENT_NAME: sampleapp                         # 例: sampleapp
-  CONTAINER_NAME: sampleapp                          # 例: sampleapp
+  AZURE_CONTAINER_REGISTRY: githubtestcontainer
+  CONTAINER_NAME: gitHubTestContainer
+  RESOURCE_GROUP: testMiyaGroup
+  CLUSTER_NAME: gitHubTest
+#  DEPLOYMENT_MANIFEST_PATH: "your-deployment-manifest-path"
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+  buildImage:
     permissions:
       contents: read
-
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # Checks out the repository this file is in
+      - uses: actions/checkout@v4
 
-      - name: Azure Login
+      # Logs in with your Azure credentials
+      - name: Azure login
         uses: azure/login@v1.4.6
         with:
-          # 事前にリポジトリの Secrets → Actions に AZURE_CREDENTIALS を登録（SP の JSON）
-          #creds: ${{ secrets.AZURE_CREDENTIALS }}          
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Show ACR info (debug)
+      # Builds and pushes an image up to your Azure Container Registry
+      - name: Build and push image to ACR
         run: |
-          echo "ACR (name): $AZURE_CONTAINER_REGISTRY"
-          az acr show -n "$AZURE_CONTAINER_REGISTRY" -o table
+          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.RESOURCE_GROUP }} --file Dockerfile .
 
-      # -----------------------------
-      # Dockerfile がリポジトリ直下にある想定
-      # 別ディレクトリなら：
-      #   --file app/Dockerfile app
-      # のように、Dockerfile パスと “ビルドコンテキスト” を一致させる
-      # -----------------------------
-      - name: Build image on ACR (az acr build)
-        run: |
-          # --image は “repository:tag” のみ（FQDN 付けない／小文字）
-          az acr build \
-            --registry "$AZURE_CONTAINER_REGISTRY" \
-            --image "${CONTAINER_REPOSITORY}:${GITHUB_SHA}" \
-            --file Dockerfile \
-            .
+  deploy:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    needs: [buildImage]
+    steps:
+      # Checks out the repository this file is in
+      - uses: actions/checkout@v4
 
-      - name: Set AKS context
-        uses: azure/aks-set-context@v4
+      # Logs in with your Azure credentials
+      - name: Azure login
+        uses: azure/login@v1.4.6
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Use kubelogin to configure your kubeconfig for Azure auth
+      - name: Set up kubelogin for non-interactive login
+        uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: 'v0.0.25'
+
+      # Retrieves your Azure Kubernetes Service cluster's kubeconfig file
+      - name: Get K8s context
+        uses: azure/aks-set-context@v3
         with:
           resource-group: ${{ env.RESOURCE_GROUP }}
           cluster-name: ${{ env.CLUSTER_NAME }}
-
-      - name: Ensure namespace exists
-        run: |
-          kubectl get ns "$K8S_NAMESPACE" >/dev/null 2>&1 || \
-          kubectl create ns "$K8S_NAMESPACE"
-
-      # k8s/ にマニフェストがあるなら初回 apply
-      - name: Apply Kubernetes manifests (if present)
-        run: |
-          if [ -d "k8s" ]; then
-            kubectl -n "$K8S_NAMESPACE" apply -f k8s/
-          else
-            echo "k8s/ directory not found. Skipping apply."
-          fi
-
-      - name: Update image & rollout
-        run: |
-          # ★ ここで派生値（FQDN 付きイメージ名）を組み立てる（env 参照は run 内で OK）
-          ACR_LOGIN_SERVER="${AZURE_CONTAINER_REGISTRY}.azurecr.io"
-          FULL_IMAGE="${ACR_LOGIN_SERVER}/${CONTAINER_REPOSITORY}:${GITHUB_SHA}"
-          echo "Setting image to: $FULL_IMAGE"
-
-          kubectl -n "$K8S_NAMESPACE" set image \
-            deployment/${DEPLOYMENT_NAME} \
-            ${CONTAINER_NAME}=${FULL_IMAGE}
-
-          kubectl -n "$K8S_NAMESPACE" rollout status deployment/${DEPLOYMENT_NAME} --timeout=180s
-
-      # 参考: 初回だけ必要な場合がある（AKS に ACR Pull 権限を付与）
-      # 毎回は実行しないことを推奨。必要時のみ手動で uncomment。
-      # - name: (One-time) Attach ACR to AKS
-      #   run: |
-      #     ACR_ID=$(az acr show -n "$AZURE_CONTAINER_REGISTRY" --query id -o tsv)
-      #     az aks update -n "$CLUSTER_NAME" -g "$RESOURCE_GROUP" --attach-acr "$ACR_ID"
-
-      # 参考: AKS が ACR から Pull できない場合（401 等）の対処（初回だけ実行推奨）
-      # 運用では毎回実行しないでください。必要時のみ手動で有効化。
-      # - name: (One-time) Attach ACR to AKS
-      #   run: |
-      #     ACR_ID=$(az acr show -n "$AZURE_CONTAINER_REGISTRY" --query id -o tsv)
-      #     az aks update -n "$CLUSTER_NAME" -g "$RESOURCE_GROUP" --attach-acr "$ACR_ID"
-
+          admin: 'false'
+          use-kubelogin: 'true'
 
       # Deploys application based on given manifest file
 #      - name: Deploys application
