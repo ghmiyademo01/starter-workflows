@@ -34,7 +34,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_CONTAINER_REGISTRY: gitHubTestContainer
+  AZURE_CONTAINER_REGISTRY: githubtestcontainer
   CONTAINER_NAME: gitHubTestContainer
   RESOURCE_GROUP: testMiyaGroup
   CLUSTER_NAME: gitHubTest
