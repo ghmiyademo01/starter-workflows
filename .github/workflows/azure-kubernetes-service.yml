@@ -35,7 +35,7 @@ on:
 
 env:
   AZURE_CONTAINER_REGISTRY: githubtestcontainer
-  CONTAINER_NAME: gitHubTestContainer
+  CONTAINER_NAME: githubtestcontainer
   RESOURCE_GROUP: testMiyaGroup
   CLUSTER_NAME: gitHubTest
 #  DEPLOYMENT_MANIFEST_PATH: "your-deployment-manifest-path"
