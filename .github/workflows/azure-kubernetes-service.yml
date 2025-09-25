@@ -79,7 +79,7 @@ jobs:
           action: deploy  # デプロイアクションを指定
      
           manifests: |  # デプロイするマニフェストファイルを指定
-            k8s/*.yml
+            k8s/*.yaml
      
           images: | # デプロイするイメージを指定
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
