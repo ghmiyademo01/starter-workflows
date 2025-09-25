@@ -73,6 +73,17 @@ jobs:
           admin: 'false'  # 管理者権限ではなく、Azure AD 経由でログイン
           use-kubelogin: 'true' # kubelogin を使用してログイン
 
+      - name: Verify manifests exist
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "PWD: $(pwd)"
+          echo "== repo root =="
+          ls -la
+          echo "== k8s folder =="
+          ls -la k8s || true
+          test -f k8s/deployment.yaml || (echo "k8s/deployment.yaml not found"; exit 1)
+          test -f k8s/service.yaml    || (echo "k8s/service.yaml not found";    exit 1)
+
       - name: Deploys application # アプリケーションをデプロイ
         uses: Azure/k8s-deploy@v4 # k8s-deploy アクションを使用
         with:
