@@ -1,0 +1,15 @@
+# k8s/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sampleapp
+  labels:
+    app: sampleapp
+spec:
+  type: LoadBalancer            # 内部だけなら ClusterIP（デフォルト）に
+  selector:
+    app: sampleapp
+  ports:
+    - name: http
+      port: 80                  # クラスタ内での公開ポート
+      targetPort: http          # Pod 内の名前付きポート（= containerPort: 3000）
