@@ -1,4 +1,3 @@
-
 FROM node:18-alpine
 WORKDIR /app
 
@@ -9,7 +8,10 @@ RUN npm install
 # ソースコードコピー
 COPY script/sync-ghes/. .
 
-# TypeScriptをJavaScriptにコンパイル
+# TypeScript を JavaScript にコンパイル
 RUN npm run build
 
 EXPOSE 3000
+
+# 起動コマンド
+CMD ["node", "dist/index.js"]
