@@ -1,52 +1,52 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.exec = exports.ExecResult = void 0;
-const child_process_1 = require("child_process");
-class ExecResult {
-    constructor() {
-        this.stdout = "";
-        this.exitCode = 0;
-    }
-}
-exports.ExecResult = ExecResult;
+
+const { exec } = require("child_process");
+
 /**
- * Executes a process
+ * コマンドを実行する関数
+ * @param {string} command 実行するシェルコマンド
+ * @returns {Promise<void>}
  */
-function exec(command, args = [], allowAllExitCodes = false) {
-    return __awaiter(this, void 0, void 0, function* () {
-        process.stdout.write(`EXEC: ${command} ${args.join(" ")}\n`);
-        return new Promise((resolve, reject) => {
-            const execResult = new ExecResult();
-            const cp = child_process_1.spawn(command, args, {});
-            // STDOUT
-            cp.stdout.on("data", (data) => {
-                process.stdout.write(data);
-                execResult.stdout += data.toString();
-            });
-            // STDERR
-            cp.stderr.on("data", (data) => {
-                process.stderr.write(data);
-            });
-            // Close
-            cp.on("close", (code) => {
-                execResult.exitCode = code;
-                if (code === 0 || allowAllExitCodes) {
-                    resolve(execResult);
-                }
-                else {
-                    reject(new Error(`Command exited with code ${code}`));
-                }
-            });
-        });
+function runCommand(command) {
+  return new Promise((resolve, reject) => {
+    const child = exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Command failed: ${command}`);
+        console.error(stderr);
+        reject(error);
+        return;
+      }
+      console.log(stdout);
+      resolve();
     });
+
+    child.on("error", (err) => {
+      console.error(`Failed to start command: ${command}`);
+      reject(err);
+    });
+  });
 }
-exports.exec = exec;
+
+/**
+ * GHESブランチに切り替える処理
+ * SKIP_GIT=true の場合はスキップ
+ */
+async function switchToGhesBranch() {
+  if (process.env.SKIP_GIT === "true") {
+    console.log("Skipping git operations because SKIP_GIT=true");
+    return;
+  }
+
+  try {
+    console.log("Switch to GHES branch");
+    await runCommand("git checkout ghes");
+  } catch (err) {
+    console.error("Unhandled error while syncing workflows", err);
+    process.exit(1);
+  }
+}
+
+module.exports = {
+  runCommand,
+  switchToGhesBranch,
+};
