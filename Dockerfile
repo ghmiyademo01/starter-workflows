@@ -5,14 +5,17 @@ WORKDIR /app
 COPY script/sync-ghes/package*.json ./
 RUN npm install
 
-# ソースコードコピー
+# ソースコードと tsconfig をコピー
 COPY script/sync-ghes/. .
 
-# TypeScript を JavaScript にコンパイル
+# tsconfig.json を正しい位置にコピー（必要なら）
+COPY tsconfig.json ./tsconfig.json
+
+# TypeScript をコンパイル
 RUN npm run build
+
+# settings.json を dist にコピー
 COPY script/sync-ghes/settings.json ./dist/settings.json
 
 EXPOSE 3000
-
-# 起動コマンド
 CMD ["node", "dist/index.js"]
