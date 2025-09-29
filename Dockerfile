@@ -21,4 +21,7 @@ COPY tsconfig.json ./tsconfig.json
 RUN chmod +x node_modules/.bin/tsc
 RUN npm run build
 
+# git操作をスキップする環境変数
+ENV SKIP_GIT=true
+
 CMD ["node", "dist/index.js"]
