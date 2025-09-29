@@ -36,9 +36,11 @@ jobs:
           azcliversion: 2.30.0
 
       - name: Azure Login
-        uses: azure/login@v1
+        uses: azure/login@v1.4.6
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }} # Azure AD アプリケーションのクライアント ID
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }} # Azure AD テナント ID
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }} # Azure サブスクリプション ID
 
       - name: Set AKS context
         run: |
