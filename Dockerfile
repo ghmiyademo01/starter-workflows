@@ -1,5 +1,5 @@
 FROM node:18-alpine
-#WORKDIR /app
+WORKDIR /app
 
 # パッケージインストール
 COPY script/sync-ghes/package*.json ./
