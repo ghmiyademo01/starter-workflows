@@ -1,18 +1,21 @@
 FROM node:18-alpine
-#WORKDIR /app
+WORKDIR /
 
-COPY script/sync-ghes/package*.json ./
-RUN npm install --include=dev
-
-# アプリコードと設定ファイルをコピー
-COPY script/sync-ghes/. .
-COPY tsconfig.json ./tsconfig.json
-
-# 必要なフォルダを追加コピー
+# 必要なフォルダをルートにコピー
 COPY ci ./ci
 COPY automation ./automation
 COPY code-scanning ./code-scanning
 COPY pages ./pages
+
+WORKDIR /app
+COPY script/sync-ghes/package*.json ./
+RUN npm install --include=dev
+
+COPY script/sync-ghes/. .
+COPY tsconfig.json ./tsconfig.json
+
+# gitを追加
+RUN apk add --no-cache git
 
 RUN chmod +x node_modules/.bin/tsc
 RUN npm run build
