@@ -1,0 +1,21 @@
+{
+  "folders": [
+    "../../ci",
+    "../../automation",
+    "../../code-scanning",
+    "../../pages"
+  ],
+  "readOnlyFolders": [
+    "../../pages"
+  ],
+  "enabledActions": [
+    "actions/cache",
+    "actions/checkout",
+    ...
+  ],
+  "partners": [
+    "Alibaba Cloud",
+    "Amazon Web Services",
+    ...
+  ]
+}
