@@ -10,6 +10,7 @@ COPY script/sync-ghes/. .
 
 # TypeScript を JavaScript にコンパイル
 RUN npm run build
+COPY script/sync-ghes/settings.json ./dist/settings.json
 
 EXPOSE 3000
 
