@@ -39,7 +39,7 @@ async function switchToGhesBranch() {
 
   try {
     console.log("Switch to GHES branch");
-    await runCommand("git checkout ghes");
+    //await runCommand("git checkout ghes");
   } catch (err) {
     console.error("Unhandled error while syncing workflows", err);
     process.exit(1);
