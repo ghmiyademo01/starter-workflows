@@ -12,7 +12,7 @@
 name: Build and deploy an app to AKS
 
 on:
-  push:
+  #push:
   workflow_dispatch:
 
 env:  # 共通環境変数
