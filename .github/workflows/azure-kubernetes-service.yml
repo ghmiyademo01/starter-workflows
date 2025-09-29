@@ -88,10 +88,14 @@ jobs:
             k8s/deployment.yaml
             k8s/service.yaml     
           images: | # デプロイするイメージを指定
-            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
-            
-          # ▼ タイムアウトを180秒に設定
-          rollout-status-timeout: '180s'
+            ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}            
+
+      # ▼ ロールアウト完了を待機（タイムアウト180秒）
+      - name: Wait for rollout
+        run: |
+          echo "Waiting for rollout to complete..."
+          kubectl rollout status deployment/sampleapp --namespace default --timeout=180s
+
 
       # ▼ 失敗時にPod情報を取得
       - name: Debug on failure
