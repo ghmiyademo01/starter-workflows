@@ -6,5 +6,6 @@
     "rootDir": ".",
     "strict": true
   },
-  "include": ["script/sync-ghes/**/*.ts"]
+  "include": ["./**/*.ts"],
+  "exclude": ["dist"]
 }
