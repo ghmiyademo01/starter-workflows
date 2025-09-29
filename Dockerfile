@@ -1,21 +1,15 @@
 FROM node:18-alpine
 WORKDIR /app
 
-# パッケージインストール
+# 必要なファイルだけコピー（package.json は依存関係のため）
 COPY script/sync-ghes/package*.json ./
-RUN npm install
+RUN npm install --production
 
-# ソースコードと tsconfig をコピー
-COPY script/sync-ghes/. .
-
-# tsconfig.json を正しい位置にコピー（必要なら）
-COPY tsconfig.json ./tsconfig.json
-
-# TypeScript をコンパイル
-RUN npm run build
-
-# settings.json を dist にコピー
+# dist フォルダと設定ファイルをコピー
+COPY script/sync-ghes/dist ./dist
 COPY script/sync-ghes/settings.json ./dist/settings.json
 
 EXPOSE 3000
+
+# index.js を起動（必要に応じて exec.js に変更可能）
 CMD ["node", "dist/index.js"]
