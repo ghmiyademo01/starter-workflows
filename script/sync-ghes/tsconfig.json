@@ -4,8 +4,7 @@
     "module": "commonjs",
     "outDir": "dist",
     "rootDir": ".",
-    "strict": true,
-    "esModuleInterop": true
+    "strict": true
   },
   "include": ["index.ts"]
 }
