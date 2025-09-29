@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "github/c2c-actions-experience",
@@ -15,10 +16,5 @@
   },
   "dependencies": {
     "js-yaml": "^3.13.1"
-  },  
-  {
-    "scripts": {
-      "start": "node index.js"
-    }
   }
 }
