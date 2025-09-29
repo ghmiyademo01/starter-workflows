@@ -10,12 +10,10 @@
   ],
   "enabledActions": [
     "actions/cache",
-    "actions/checkout",
-    ...
+    "actions/checkout"
   ],
   "partners": [
     "Alibaba Cloud",
-    "Amazon Web Services",
-    ...
+    "Amazon Web Services"
   ]
 }
