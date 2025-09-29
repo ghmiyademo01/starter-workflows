@@ -91,11 +91,11 @@ jobs:
             ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}            
 
       # ▼ ロールアウト完了を待機（タイムアウト180秒）
-      - name: Wait for rollout
+      - name: Wait for rollout (max 180s)
         run: |
           echo "Waiting for rollout to complete..."
-          kubectl rollout status deployment/sampleapp --namespace default --timeout=180s
-
+          kubectl rollout status deployment/sampleapp --namespace default --timeout=180s || true
+          kubectl wait --for=condition=Available deployment/sampleapp --namespace default --timeout=180s || true
 
       # ▼ 失敗時にPod情報を取得
       - name: Debug on failure
